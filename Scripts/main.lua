@@ -1,6 +1,6 @@
 -- ============================================================
 --  Retro Rewind - Sidewalk Sign QoL
---  Version: 1.0
+--  Version: 1.0.1
 --
 --  Lets you set the bonus value for each sidewalk sign ad type
 --  individually. Values can be raised above or lowered below
@@ -30,14 +30,20 @@ local function log(msg)
     print(P .. msg .. "\n")
 end
 
--- Maps the game's sale type byte to config table keys.
+local function debug(msg)
+    if CONFIG.Debug then
+        log(msg)
+    end
+end
+
+-- Maps the game's sale type byte to type name and config key.
 -- Confirmed via in-game testing against the native enum values.
 local SALE_TYPE_MAP = {
-    [1] = "MoreCustomers",
-    [2] = "NewRelease",
-    [3] = "Concessions",
-    [4] = "Snacks",
-    [5] = "ClearanceSale",
+    [1] = { name = "MoreCustomers",  key = "bonusMoreCustomers"  },
+    [2] = { name = "NewRelease",     key = "bonusNewRelease"     },
+    [3] = { name = "Concessions",    key = "bonusConcessions"    },
+    [4] = { name = "Snacks",         key = "bonusSnacks"         },
+    [5] = { name = "ClearanceSale",  key = "bonusClearanceSale"  },
     -- [0] = "NotSet" intentionally excluded -- no bonus when sign is unset
 }
 
@@ -47,30 +53,18 @@ local SALE_TYPE_MAP = {
 -- Invalid entries are skipped; valid ones still apply.
 -- ============================================================
 local function validateConfig()
-    if type(CONFIG.bonuses) ~= "table" then
-        log("Config error: 'bonuses' must be a table")
-        return false
-    end
-
-    -- Build a reverse lookup so we can check for unknown keys
-    local validKeys = {}
-    for _, name in pairs(SALE_TYPE_MAP) do
-        validKeys[name] = true
-    end
-
     local allValid = true
-    for key, value in pairs(CONFIG.bonuses) do
-        if not validKeys[key] then
-            log("Config warning: unknown ad type '" .. tostring(key) .. "' -- entry will be ignored")
-            allValid = false
-        elseif type(value) ~= "number" then
-            log("Config error: value for '" .. key .. "' must be a number -- entry will be ignored")
-            allValid = false
-        elseif value < 0.0 then
-            log("Config warning: value for '" .. key .. "' is below 0.0 -- will be clamped to 0.0")
+    for _, entry in pairs(SALE_TYPE_MAP) do
+        local value = CONFIG[entry.key]
+        if value ~= nil then
+            if type(value) ~= "number" then
+                log("Config error: '" .. entry.key .. "' must be a number -- entry will be ignored")
+                allValid = false
+            elseif value < 0.0 then
+                log("Config warning: '" .. entry.key .. "' is below 0.0 -- will be clamped to 0.0")
+            end
         end
     end
-
     return allValid
 end
 
@@ -82,20 +76,12 @@ end
 -- ============================================================
 local function buildBonusTable()
     local bonuses = {}
-
-    if type(CONFIG.bonuses) ~= "table" then return bonuses end
-
-    local validKeys = {}
-    for _, name in pairs(SALE_TYPE_MAP) do
-        validKeys[name] = true
-    end
-
-    for key, value in pairs(CONFIG.bonuses) do
-        if validKeys[key] and type(value) == "number" then
-            bonuses[key] = math.max(0.0, value)
+    for _, entry in pairs(SALE_TYPE_MAP) do
+        local value = CONFIG[entry.key]
+        if type(value) == "number" then
+            bonuses[entry.name] = math.max(0.0, value)
         end
     end
-
     return bonuses
 end
 
@@ -130,15 +116,15 @@ NotifyOnNewObject(
                     -- call returns our value to the AI Director.
                     function(self, saleTypeParam, bonusParam)
                         pcall(function()
-                            local saleType = saleTypeParam:get()
-                            local typeName = SALE_TYPE_MAP[saleType]
+                            local saleType  = saleTypeParam:get()
+                            local typeEntry = SALE_TYPE_MAP[saleType]
 
                             -- Skip types we don't recognise (e.g. NotSet)
-                            if not typeName then return end
+                            if not typeEntry then return end
 
                             -- Skip types not present in config;
                             -- the game's native value passes through unchanged
-                            local configValue = bonuses[typeName]
+                            local configValue = bonuses[typeEntry.name]
                             if configValue == nil then return end
 
                             bonusParam:set(configValue)
@@ -148,18 +134,14 @@ NotifyOnNewObject(
             end)
 
             if ok then
-                -- Log the active overrides so the player can verify config
-                log("Hook active -- configured bonuses:")
-                local validKeys = {}
-                for _, name in pairs(SALE_TYPE_MAP) do
-                    validKeys[name] = true
-                end
-                for _, typeName in pairs(SALE_TYPE_MAP) do
-                    local value = buildBonusTable()[typeName]
+                log("Hook active")
+                local activeBonuses = buildBonusTable()
+                for _, entry in pairs(SALE_TYPE_MAP) do
+                    local value = activeBonuses[entry.name]
                     if value ~= nil then
-                        log("  " .. typeName .. " = " .. string.format("%.2f", value))
+                        debug("  " .. entry.name .. " = " .. string.format("%.2f", value))
                     else
-                        log("  " .. typeName .. " = (native default)")
+                        debug("  " .. entry.name .. " = (native default)")
                     end
                 end
             else

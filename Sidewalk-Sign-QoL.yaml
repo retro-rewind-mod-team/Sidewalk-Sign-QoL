@@ -1,0 +1,49 @@
+# ── Required Fields ───────────────────────────────────────────────────────────
+
+name: "Sidewalk Sign QoL"
+author: "Xerduntis"
+version: "1.1"
+mod_type: lua
+
+# ── Optional Fields ───────────────────────────────────────────────────────────
+
+description: "Configure the bonus strength for each sidewalk sign ad type individually. Raise weak bonuses, lower strong ones, or disable any type entirely. Save file and data tables are never modified."
+
+# Nexus Mods IDs — used for update checking.
+
+
+config:
+  - key: Debug
+    label: "Debug Mode"
+    type: bool
+    default: false
+
+  - key: bonusMoreCustomers
+    label: "Bonus: More Customers"
+    description: "Increases customer spawn rate. Game default: 0.2. Range: 0.0–1.0 (0.0 = disabled, 1.0 = maximum)."
+    type: float
+    default: 0.2
+
+  - key: bonusNewRelease
+    label: "Bonus: New Release"
+    description: "Bonus for renting new release films. Game default: 0.25. Range: 0.0–1.0."
+    type: float
+    default: 0.25
+
+  - key: bonusConcessions
+    label: "Bonus: Concessions"
+    description: "Bonus for concession stand sales. Game default: 0.5. Range: 0.0–1.0."
+    type: float
+    default: 0.5
+
+  - key: bonusSnacks
+    label: "Bonus: Snacks"
+    description: "Bonus for snack shelf sales. Game default: 0.5. Range: 0.0–1.0."
+    type: float
+    default: 0.5
+
+  - key: bonusClearanceSale
+    label: "Bonus: Clearance Sale"
+    description: "Bonus for clearance bin purchases. Game default: 0.5. Range: 0.0–1.0."
+    type: float
+    default: 0.5
